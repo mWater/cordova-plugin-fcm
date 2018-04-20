@@ -16,6 +16,7 @@ static BOOL notificatorReceptorReady = NO;
 static BOOL appInForeground = YES;
 
 static NSString *notificationCallback = @"FCMPlugin.onNotificationReceived";
+static NSString *tokenRefreshCallback = @"FCMPlugin.onTokenRefreshReceived";
 static FCMPlugin *fcmPluginInstance;
 
 + (FCMPlugin *) fcmPlugin {
@@ -64,7 +65,7 @@ static FCMPlugin *fcmPluginInstance;
 - (void) unsubscribeFromTopic:(CDVInvokedUrlCommand *)command 
 {
     NSString* topic = [command.arguments objectAtIndex:0];
-    NSLog(@"subscribe To Topic %@", topic);
+    NSLog(@"unsubscribe From Topic %@", topic);
     [self.commandDelegate runInBackground:^{
         if(topic != nil)[[FIRMessaging messaging] unsubscribeFromTopic:[NSString stringWithFormat:@"/topics/%@", topic]];
         CDVPluginResult* pluginResult = nil;
@@ -92,6 +93,18 @@ static FCMPlugin *fcmPluginInstance;
 {
     NSString *JSONString = [[NSString alloc] initWithBytes:[payload bytes] length:[payload length] encoding:NSUTF8StringEncoding];
     NSString * notifyJS = [NSString stringWithFormat:@"%@(%@);", notificationCallback, JSONString];
+    NSLog(@"stringByEvaluatingJavaScriptFromString %@", notifyJS);
+    
+    if ([self.webView respondsToSelector:@selector(stringByEvaluatingJavaScriptFromString:)]) {
+        [(UIWebView *)self.webView stringByEvaluatingJavaScriptFromString:notifyJS];
+    } else {
+        [self.webViewEngine evaluateJavaScript:notifyJS completionHandler:nil];
+    }
+}
+
+-(void) notifyOfTokenRefresh:(NSString *)token
+{
+    NSString * notifyJS = [NSString stringWithFormat:@"%@('%@');", tokenRefreshCallback, token];
     NSLog(@"stringByEvaluatingJavaScriptFromString %@", notifyJS);
     
     if ([self.webView respondsToSelector:@selector(stringByEvaluatingJavaScriptFromString:)]) {
